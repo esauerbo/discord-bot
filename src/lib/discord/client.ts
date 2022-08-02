@@ -7,6 +7,7 @@ import giverole from './commands/giverole'
 import contribute from './commands/contribute'
 import thread, { PREFIXES } from './commands/thread'
 import github from './commands/github'
+import admin from './commands/admin'
 
 export const client = new Client({
   intents: [
@@ -24,6 +25,7 @@ export const commands = createDiscordCommandBank([
   contribute,
   thread,
   github,
+  admin,
 ])
 
 client.once('ready', () => {
