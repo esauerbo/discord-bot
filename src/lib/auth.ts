@@ -19,7 +19,7 @@ export async function signIn(provider: Provider) {
   )
 
   const request = new Request(url.pathname, {
-    method: 'post',
+    method: 'POST',
     redirect: 'follow',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',

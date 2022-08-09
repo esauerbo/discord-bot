@@ -1,4 +1,4 @@
-import { get as read } from 'svelte/store'
+// import { get as read } from 'svelte/store'
 import { Routes } from 'discord-api-types/v10'
 import { prisma } from '$lib/db'
 import { guild as store } from '$lib/store'
