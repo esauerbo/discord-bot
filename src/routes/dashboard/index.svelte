@@ -15,11 +15,9 @@
     Grid,
     Row,
     Column,
-    DatePicker,
-    DatePickerInput,
-    UnorderedList,
-    ListItem,
+    Dropdown,
   } from 'carbon-components-svelte'
+  import RangeOfDates from './Datepickers/RangeOfDates.svelte';
 
   export let name: string
   export let memberCount: number
@@ -47,35 +45,9 @@
     </Row>
     <Row>
       <Column><h1>Questions</h1></Column>
-      <Column><DatePicker datePickerType="range" on:change>
-        <DatePickerInput labelText="Range" placeholder="mm/dd/yyyy" />
-      </DatePicker></Column>
+      <Column>
+        <svelte:component this="{RangeOfDates}" />
+      </Column>
     </Row>
   </Grid>
 </Content>
-
-<style>
-  :global(.ha--search-form) {
-    display: flex;
-    flex-direction: row;
-
-    position: relative;
-    left: unset;
-    bottom: unset;
-    right: unset;
-  }
-
-  @media (max-width: 33rem) {
-    :global(.ha--search-form) {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-    }
-  }
-
-  :global(.ha--questions) {
-    display: grid;
-    grid-gap: var(--cds-layout-02);
-  }
-</style>
