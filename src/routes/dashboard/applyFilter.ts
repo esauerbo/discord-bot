@@ -111,6 +111,7 @@ export function binDates(
   const datedQuestions = new Map<string, QuestionCategoriesCounts>([
     ['aggregate', { total: 0, unanswered: 0, staff: 0, community: 0 }],
   ])
+  if(!dates?.length) return datedQuestions
 
   const filterQuestionsByDate = (
     questions: QuestionCategories,
@@ -124,17 +125,17 @@ export function binDates(
       community: 0,
     }
     Object.entries(questions).forEach(([category, categoryQuestions]) => {
-      let count = categoryQuestions.filter((question: GenericQuestion) => 
-          (new Date(question.createdAt) >= startDate &&
+      let count = categoryQuestions.filter(
+        (question: GenericQuestion) =>
+          new Date(question.createdAt) >= startDate &&
           new Date(question.createdAt) < endDate
-        )
       )?.length
       filteredQuestions[category] = count
       datedQuestions.get('aggregate')[category] += count
     })
     return filteredQuestions
   }
-  for (let i = 0; i < dates.length - 1; i++) {
+  for (let i = 0; i < dates?.length - 1; i++) {
     datedQuestions.set(
       dates[i].toString(),
       filterQuestionsByDate(questions, dates[i], dates[i + 1])

@@ -12,11 +12,11 @@
   import '@carbon/styles/css/styles.css'
   import '@carbon/charts/styles.css'
   import { BarChartStacked } from '@carbon/charts-svelte'
-  import { Content, Grid, Row, Column } from 'carbon-components-svelte'
+  import { Column, Content, Grid, Row, Tag } from 'carbon-components-svelte'
+  import { ArrowUp, Group } from 'carbon-icons-svelte'
   import { binDates, timeBetweenDates } from './applyFilter'
   import RangeOfDates from './RangeOfDates.svelte'
-  import type { QuestionCategories } from './types'
-
+  import type { QuestionCategories, QuestionCategoriesCounts } from './types'
   export let questions: QuestionCategories
   export let name: string
   export let memberCount: number
@@ -27,20 +27,18 @@
   let startDate = new Date(today.getFullYear(), today.getMonth() - 3, 1)
   let dates: Date[] = timeBetweenDates('months', [startDate, endDate])
   let filtered = binDates(dates, questions)
-  // for (const [date, questionCategories] of filtered) {
-  //     console.log(questionCategories)
-  //     // Object.entries(questionCategories).forEach(([category, categoryQuestions]) => {
-  //     //   values.push({"group": category, "key": date, "value": })
-  //     // })
-  //   }
-  const getData = () => {
+  let dropdown_selected = '2'
+
+  const getLabel = () => {}
+
+  const getData = (filtered: Map<string, QuestionCategoriesCounts>) => {
     const map = new Map(filtered)
     map.delete('aggregate')
     const values: Record<string, any>[] = []
     for (const [date, questionCategories] of map) {
       console.log(questionCategories)
       Object.entries(questionCategories).forEach(([category, count]) => {
-        values.push({"group": category, "key": date, "value": count})
+        values.push({ group: category, key: date, value: count })
       })
     }
     console.log(values)
@@ -48,11 +46,25 @@
   }
 
   $: filtered = binDates(dates, questions)
+
   $: total = filtered.get('aggregate')?.total ?? ''
   $: unanswered = filtered.get('aggregate')?.unanswered ?? ''
+  $: unansweredPct =
+    total && unanswered
+      ? `${Math.round((100 * parseInt(unanswered)) / parseInt(total))}%`
+      : ''
   $: staff = filtered.get('aggregate')?.staff ?? ''
+  $: staffPct =
+    total && staff
+      ? `${Math.round((100 * parseInt(staff)) / parseInt(total))}%`
+      : ''
   $: community = filtered.get('aggregate')?.community ?? ''
-  $: data = getData()
+  $: communityPct =
+    total && staff
+      ? `${Math.round((100 * parseInt(community)) / parseInt(total))}%`
+      : ''
+
+  $: data = getData(filtered)
 </script>
 
 <svelte:head>
@@ -62,23 +74,26 @@
 <Content>
   <Grid>
     <Row>
-      <Column class="ha--questions">
-        <h1>{name} Discord Metrics Dashboard</h1>
+      <Column class="members-count" style="background: rgb(15, 98, 254, 0.1);">
+        <h1>
+          {memberCount}
+          <ArrowUp size="{32}" color="var(--cds-interactive-01, #0f62fe)" />
+        </h1>
+        <h4 class="number-text">Total Members</h4>
+      </Column>
+      <Column class="members-count" style="background: rgb(0, 255, 0, 0.1);">
+        <h1>{presenceCount} <Group size="{32}" color="green" /></h1>
+        <h4 class="number-text">Members Online</h4>
       </Column>
     </Row>
-    <Row>
-      <Column>
-        <h2>{memberCount} Total Members</h2>
-      </Column>
-      <Column>
-        <h2>{presenceCount} Online Members</h2>
-      </Column>
-    </Row>
-    <Row>
-      <Column><h1>Questions</h1></Column>
+    <Row class="date-container">
+      <Column style="max-width:min-content"
+        ><h2 style="font-weight: lighter;">Questions</h2></Column
+      >
       <Column>
         <RangeOfDates
           bind:dates
+          bind:dropdown_selectedId="{dropdown_selected}"
           today="{today}"
           startDate="{startDate}"
           endDate="{endDate}"
@@ -87,40 +102,111 @@
     </Row>
     <Row>
       <Column
-        ><h1>{total}</h1>
-        <h2>Total Questions</h2></Column
+        class="split-counts"
+        style="outline-color: rgb(255, 255, 255, 0.5);"
       >
+        <h1>{total}</h1>
+        <h4 class="number-text">Total Questions</h4>
+      </Column>
       <Column
-        ><h1>{unanswered}</h1>
-        <h2>Answered by Staff</h2></Column
+        class="split-counts"
+        style="color: rgb(255, 153, 0); outline-width:0"
       >
+        <h1>
+          {staff}
+          <Tag style="background-color:rgb(255, 153, 0, 0.6)">{staffPct}</Tag>
+        </h1>
+        <h4 class="number-text">Answered by Staff</h4>
+      </Column>
+      <Column class="split-counts" style="outline-color:rgb(15, 98, 254, 0.6)">
+        <h1>
+          {community}
+          <Tag style="background-color:rgb(15, 98, 254, 0.6)"
+            >{communityPct}</Tag
+          >
+        </h1>
+        <h4 class="number-text">Answered by Community</h4>
+      </Column>
       <Column
-        ><h1>{staff}</h1>
-        <h2>Answered by Community</h2></Column
+        class="split-counts"
+        style="background-color: rgb(255, 0, 0, 0.2); outline-width:0"
       >
-      <Column
-        ><h1>{community}</h1>
-        <h2>Unanswered</h2></Column
-      >
+        <h1>
+          {unanswered}
+          <Tag style="background-color:rgb(255, 0, 0, 0.4)">{unansweredPct}</Tag
+          >
+        </h1>
+        <h4 class="number-text">Unanswered</h4>
+      </Column>
     </Row>
-    <Row
-      ><BarChartStacked
-        data="{data}"
-        options={{
-          "title": "Vertical stacked bar (discrete)",
-          "axes": {
-            "left": {
-              "mapsTo": "value",
-              "stacked": true
+    <Row style="margin-top:16px">
+      <BarChartStacked
+        bind:data
+        options="{{
+          title: '',
+          axes: {
+            left: {
+              title: 'Questions',
+              mapsTo: 'value',
+              stacked: true,
             },
-            "bottom": {
-              "mapsTo": "key",
-              "scaleType": "labels"
-            }
+            bottom: {
+              title: 'Date',
+              mapsTo: 'key',
+              scaleType: 'time',
+            },
           },
-          "height": "400px"
-        }}
+          grid: {
+            x: {
+              enabled: false,
+            },
+          },
+          height: '400px',
+        }}"
+        theme="g100"
+        tooltip="{{
+          customHTML: {},
+        }}"
       /></Row
     >
   </Grid>
 </Content>
+
+<style>
+  :global(.members-count) {
+    flex-direction: row;
+    position: relative;
+    left: unset;
+    bottom: unset;
+    right: unset;
+    margin: 6px;
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  :global(.number-text) {
+    font-weight: lighter;
+  }
+
+  :global(.members-count > h1) {
+    font-size: 60px;
+  }
+
+  :global(.date-container) {
+    flex-direction: row;
+    position: relative;
+    margin-top: 6px;
+    padding-top: 12px;
+    width: 100%;
+  }
+
+  :global(.split-counts) {
+    background: rgb(198, 198, 198, 0.05);
+    margin: 6px;
+    padding: 12px;
+    margin-top: 20px;
+    outline-style: solid;
+    outline-width: thin;
+    border-radius: 10px;
+  }
+</style>
