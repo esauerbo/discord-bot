@@ -3,7 +3,6 @@ import type {
   QuestionCategoriesCounts,
   GenericQuestion,
 } from './types'
-import type { Question } from '@prisma/client'
 
 /** rounds start date UP to the next whole week, month, or year */
 export function roundStartDate(unit: string, start: Date): boolean {

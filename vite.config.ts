@@ -49,6 +49,9 @@ const app: UserConfig = {
       $discord: relative('./src/lib/discord'),
     },
   },
+  ssr: {
+		noExternal: ['@carbon/charts', 'carbon-components'],
+	},
 }
 
 /**
@@ -91,6 +94,9 @@ const server: UserConfig = {
       $discord: relative('./src/lib/discord'),
     },
   },
+  // ssr: {
+	// 	noExternal: ['@carbon/charts', 'carbon-components'],
+	// },
 }
 
 export default defineConfig(({ mode }) => {
