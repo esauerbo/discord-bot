@@ -147,3 +147,16 @@ export function binDates(
   )
   return datedQuestions
 }
+
+export function filterQuestionsByChannel(questions: QuestionCategories, channels: string[]) {
+  console.log(channels)
+  Object.entries(questions).forEach(([category, categoryQuestions]) => {
+    questions[category] = categoryQuestions.filter((question) => channels.includes(question.channelName))
+  })
+  //return questions
+}
+
+export function filterQuestions(channels: string[], dates: Date[], questions: QuestionCategories,): Map<string, QuestionCategoriesCounts> {
+  filterQuestionsByChannel(questions, channels)
+  return binDates(dates, questions)
+} 

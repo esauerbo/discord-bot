@@ -13,7 +13,6 @@ export const GET: RequestHandler = async () => {
   const questions = await prisma.question.findMany({
     include: { answer: { select: { ownerId: true } } },
   })
-
   async function asyncFilter(arr: Question[], callback) {
     return (
       await Promise.all(

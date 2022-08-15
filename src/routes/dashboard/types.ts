@@ -4,7 +4,7 @@ export type AnsweredQuestion = Question & { answer: { ownerId: string } }
 export type GenericQuestion = Question | AnsweredQuestion
 
 export type QuestionCategories = {
-    total: GenericQuestion[],
+    [total: string]: GenericQuestion[],
     unanswered: GenericQuestion[],
     staff: GenericQuestion[],
     community: GenericQuestion[]

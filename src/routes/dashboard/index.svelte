@@ -11,11 +11,12 @@
 <script lang="ts">
   import '@carbon/styles/css/styles.css'
   import '@carbon/charts/styles.css'
-  import { BarChartStacked } from '@carbon/charts-svelte'
+  import { BarChartStacked, StackedAreaChart } from '@carbon/charts-svelte'
   import { Column, Content, Grid, Row, Tag } from 'carbon-components-svelte'
   import { ArrowUp, Group } from 'carbon-icons-svelte'
-  import { binDates, timeBetweenDates } from './applyFilter'
-  import RangeOfDates from './RangeOfDates.svelte'
+  import { filterQuestions, timeBetweenDates } from './applyFilter'
+  import FilterMenu from './FilterMenu.svelte'
+  import type { Question } from '@prisma/client'
   import type { QuestionCategories, QuestionCategoriesCounts } from './types'
   export let questions: QuestionCategories
   export let name: string
@@ -26,26 +27,22 @@
   let endDate = today
   let startDate = new Date(today.getFullYear(), today.getMonth() - 3, 1)
   let dates: Date[] = timeBetweenDates('months', [startDate, endDate])
-  let filtered = binDates(dates, questions)
-  let dropdown_selected = '2'
+  let channels = Array.from(new Set(questions.total.map((question: Question) => question.channelName)))
+  let filtered = filterQuestions(channels, dates, questions)
 
-  const getLabel = () => {}
-
-  const getData = (filtered: Map<string, QuestionCategoriesCounts>) => {
+  const getBarData = (filtered: Map<string, QuestionCategoriesCounts>) => {
     const map = new Map(filtered)
     map.delete('aggregate')
     const values: Record<string, any>[] = []
     for (const [date, questionCategories] of map) {
-      console.log(questionCategories)
       Object.entries(questionCategories).forEach(([category, count]) => {
         values.push({ group: category, key: date, value: count })
       })
     }
-    console.log(values)
     return values
   }
 
-  $: filtered = binDates(dates, questions)
+  $: filtered = filterQuestions(channels, dates, questions)
 
   $: total = filtered.get('aggregate')?.total ?? ''
   $: unanswered = filtered.get('aggregate')?.unanswered ?? ''
@@ -64,7 +61,7 @@
       ? `${Math.round((100 * parseInt(community)) / parseInt(total))}%`
       : ''
 
-  $: data = getData(filtered)
+  $: data = getBarData(filtered)
 </script>
 
 <svelte:head>
@@ -91,9 +88,9 @@
         ><h2 style="font-weight: lighter;">Questions</h2></Column
       >
       <Column>
-        <RangeOfDates
+        <FilterMenu
           bind:dates
-          bind:dropdown_selectedId="{dropdown_selected}"
+          bind:channels
           today="{today}"
           startDate="{startDate}"
           endDate="{endDate}"
@@ -169,6 +166,36 @@
         }}"
       /></Row
     >
+    <Row style="margin-top:16px">
+      <StackedAreaChart
+        bind:data
+        options="{{
+          title: '',
+          axes: {
+            left: {
+              title: 'Questions',
+              mapsTo: 'value',
+              stacked: true,
+            },
+            bottom: {
+              title: 'Date',
+              mapsTo: 'key',
+              scaleType: 'time',
+            },
+          },
+          grid: {
+            x: {
+              enabled: false,
+            },
+          },
+          height: '400px',
+        }}"
+        theme="g100"
+        tooltip="{{
+          customHTML: {},
+        }}"
+      />
+    </Row>
   </Grid>
 </Content>
 

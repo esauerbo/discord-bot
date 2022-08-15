@@ -1,10 +1,11 @@
 <script lang="ts">
   import {
-    Row,
     Column,
     DatePicker,
     DatePickerInput,
     Dropdown,
+    MultiSelect,
+    Row,
   } from 'carbon-components-svelte'
   import { timeBetweenDates } from './applyFilter'
 
@@ -12,7 +13,30 @@
   export let today: Date
   export let startDate: Date
   export let endDate: Date
-  export let dropdown_selectedId = '2'
+  export let channels: string[]
+
+
+  // filter by channel
+  const channelDropdownItems: { id: string; text: string }[] = []
+  let i = 0
+  for (const channel of channels) {
+    channelDropdownItems.push({
+      id: i.toString(),
+      text: channel,
+    })
+    i++
+  }
+
+  let channel_selectedIds = channelDropdownItems.map((item) => item.id)
+
+  // filter by date
+  let frequency_selectedId = '2'
+  const frequencyDropdownItems = [
+    { id: '0', text: 'Daily', disabled: false, value: 'days' },
+    { id: '1', text: 'Weekly', disabled: false, value: 'weeks' },
+    { id: '2', text: 'Monthly', disabled: false, value: 'months' },
+    { id: '3', text: 'Yearly', disabled: false, value: 'years' },
+  ]
 
   const onDateChange = (d: CustomEvent) => {
     startDate = d.detail.selectedDates[0]
@@ -20,31 +44,24 @@
     dates = timeBetweenDates(frequency, d.detail.selectedDates)
   }
 
-  const dropdownItems = [
-    { id: '0', text: 'Daily', disabled: false, value: 'days' },
-    { id: '1', text: 'Weekly', disabled: false, value: 'weeks' },
-    { id: '2', text: 'Monthly', disabled: false, value: 'months' },
-    { id: '3', text: 'Yearly', disabled: false, value: 'years' },
-  ]
-
   const frequencySpelling = () =>
     dates.length === 1 ? frequency.slice(0, -1) : frequency
 
-  $: label = `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}: ${
-    dates.length
-  } ${frequencySpelling()}`
+  $: label = `${dates.length} ${frequencySpelling()}`
   $: frequency =
-    dropdownItems.find((item) => item.id === dropdown_selectedId)?.value ?? ''
+    frequencyDropdownItems.find((item) => item.id === frequency_selectedId)
+      ?.value ?? ''
+  $: channels = channel_selectedIds.map(id => channelDropdownItems.find(item => item.id === id)?.text)
   $: dates = timeBetweenDates(frequency, [startDate, endDate])
 </script>
 
 <Row>
-  <Column  style="max-width:min-content">
+  <Column style="max-width:min-content">
     <Dropdown
       class="frequency-selector"
       titleText="Frequency"
-      bind:selectedId="{dropdown_selectedId}"
-      items="{dropdownItems}"
+      bind:selectedId="{frequency_selectedId}"
+      items="{frequencyDropdownItems}"
     />
   </Column>
   <Column>
@@ -55,12 +72,18 @@
       valueFrom="{startDate.toLocaleDateString()}"
       valueTo="{endDate.toLocaleDateString()}"
     >
-      <DatePickerInput
-        labelText="FROM"
-        placeholder="mm/dd/yyyy"
-      />
+      <DatePickerInput labelText="FROM" placeholder="mm/dd/yyyy" />
       <DatePickerInput labelText="TO" placeholder="mm/dd/yyyy" />
     </DatePicker>
+    <p style="font-weight:lighter">{label}</p>
+  </Column>
+  <Column
+    ><MultiSelect
+      class="frequency-selector"
+      items="{channelDropdownItems}"
+      titleText="Channel"
+      bind:selectedIds="{channel_selectedIds}"
+    />
   </Column>
 </Row>
 
