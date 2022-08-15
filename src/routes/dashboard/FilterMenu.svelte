@@ -15,7 +15,6 @@
   export let endDate: Date
   export let channels: string[]
 
-
   // filter by channel
   const channelDropdownItems: { id: string; text: string }[] = []
   let i = 0
@@ -44,6 +43,13 @@
     dates = timeBetweenDates(frequency, d.detail.selectedDates)
   }
 
+  const getChannels = (channel_selectedIds: string[]) => {
+    console.log(channel_selectedIds)
+    const val = channel_selectedIds.map(id => channelDropdownItems.find(item => item.id === id)?.text)
+    console.log(val)
+    return val
+  }
+
   const frequencySpelling = () =>
     dates.length === 1 ? frequency.slice(0, -1) : frequency
 
@@ -51,7 +57,7 @@
   $: frequency =
     frequencyDropdownItems.find((item) => item.id === frequency_selectedId)
       ?.value ?? ''
-  $: channels = channel_selectedIds.map(id => channelDropdownItems.find(item => item.id === id)?.text)
+  $: channels = getChannels(channel_selectedIds) 
   $: dates = timeBetweenDates(frequency, [startDate, endDate])
 </script>
 
