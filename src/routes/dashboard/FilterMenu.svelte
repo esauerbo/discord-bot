@@ -43,12 +43,7 @@
     dates = timeBetweenDates(frequency, d.detail.selectedDates)
   }
 
-  const getChannels = (channel_selectedIds: string[]) => {
-    console.log(channel_selectedIds)
-    const val = channel_selectedIds.map(id => channelDropdownItems.find(item => item.id === id)?.text)
-    console.log(val)
-    return val
-  }
+  const getChannels = (channel_selectedIds: string[]) => channel_selectedIds.map(id => channelDropdownItems.find(item => item.id === id)?.text)
 
   const frequencySpelling = () =>
     dates.length === 1 ? frequency.slice(0, -1) : frequency
@@ -61,7 +56,7 @@
   $: dates = timeBetweenDates(frequency, [startDate, endDate])
 </script>
 
-<Row>
+<Row class="filter">
   <Column style="max-width:min-content">
     <Dropdown
       class="frequency-selector"
@@ -81,7 +76,7 @@
       <DatePickerInput labelText="FROM" placeholder="mm/dd/yyyy" />
       <DatePickerInput labelText="TO" placeholder="mm/dd/yyyy" />
     </DatePicker>
-    <p style="font-weight:lighter">{label}</p>
+    <p style="font-weight:lighter; margin-left:4px;">{label}</p>
   </Column>
   <Column
     ><MultiSelect
@@ -98,7 +93,11 @@
     background-color: var(--cds-ui-01, #f4f4f4);
   }
 
-  :global(.frequency-selector > .bx--dropdown) {
-    border-radius: 8px;
+  :global(.filter .bx--dropdown) {
+    border-radius: 6px;
+  }
+
+  :global(.filter .bx--multi-select) {
+    border-radius: 6px;
   }
 </style>

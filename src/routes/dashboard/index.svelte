@@ -12,12 +12,25 @@
   import '@carbon/styles/css/styles.css'
   import '@carbon/charts/styles.css'
   import { BarChartStacked, StackedAreaChart } from '@carbon/charts-svelte'
-  import { Column, Content, Grid, Row, Tag } from 'carbon-components-svelte'
-  import { ArrowUp, Group } from 'carbon-icons-svelte'
+  import {
+    Column,
+    Content,
+    DataTable,
+    Grid,
+    Row,
+    Tag,
+  } from 'carbon-components-svelte'
+  import { ArrowUp, CaretUp, Group } from 'carbon-icons-svelte'
   import { filterQuestions, timeBetweenDates } from './applyFilter'
   import FilterMenu from './FilterMenu.svelte'
   import type { Question } from '@prisma/client'
-  import type { QuestionCategories, QuestionCategoriesCounts } from './types'
+  import type {
+    AnsweredQuestion,
+    AnyQuestion,
+    QuestionCategories,
+    QuestionCategoriesCounts,
+  } from './types'
+
   export let questions: QuestionCategories
   export let name: string
   export let memberCount: number
@@ -27,10 +40,12 @@
   let endDate = today
   let startDate = new Date(today.getFullYear(), today.getMonth() - 3, 1)
   let dates: Date[] = timeBetweenDates('months', [startDate, endDate])
-  let channels = Array.from(new Set(questions.total.map((question: Question) => question.channelName)))
+  let channels = Array.from(
+    new Set(questions.total.map((question: Question) => question.channelName))
+  )
   let filtered = filterQuestions(channels, dates, questions)
 
-  const getBarData = (filtered: Map<string, QuestionCategoriesCounts>) => {
+  const getBarData = (filtered: Map<string, QuestionCategories>) => {
     const map = new Map(filtered)
     map.delete('aggregate')
     const values: Record<string, any>[] = []
@@ -42,26 +57,45 @@
     return values
   }
 
+  const getTopContributors = (questions: AnyQuestion[]) => {
+    const counts = questions
+      .filter((question: AnyQuestion) => question.answer)
+
+      .reduce((count, question) => {
+        const key = `${question.answer.answeredBy.discordUsername}${question.answer.answeredBy.githubUsername}`
+        return count[key] ? ++count[key] : (count[key] = 1), count
+      }, {})
+
+    return Object.entries(counts)
+      .sort((prev, next) => next[1] - prev[1])
+      .slice(0, 9)
+      .map((contributor) => {return {id: contributor[0], name: contributor[0], answers: contributor[1]}})
+  }
+  let topOverall = getTopContributors(filtered.get('aggregate')?.staff?.concat(filtered.get('aggregate')?.community))
+  let topStaff = getTopContributors(filtered.get('aggregate')?.staff)
+
   $: filtered = filterQuestions(channels, dates, questions)
 
-  $: total = filtered.get('aggregate')?.total ?? ''
-  $: unanswered = filtered.get('aggregate')?.unanswered ?? ''
+  $: total = filtered.get('aggregate')?.total?.length ?? ''
+  $: unanswered = filtered.get('aggregate')?.unanswered?.length ?? ''
   $: unansweredPct =
     total && unanswered
       ? `${Math.round((100 * parseInt(unanswered)) / parseInt(total))}%`
       : ''
-  $: staff = filtered.get('aggregate')?.staff ?? ''
+  $: staff = filtered.get('aggregate')?.staff?.length ?? ''
   $: staffPct =
     total && staff
       ? `${Math.round((100 * parseInt(staff)) / parseInt(total))}%`
       : ''
-  $: community = filtered.get('aggregate')?.community ?? ''
+  $: community = filtered.get('aggregate')?.community?.length ?? ''
   $: communityPct =
     total && staff
       ? `${Math.round((100 * parseInt(community)) / parseInt(total))}%`
       : ''
 
   $: data = getBarData(filtered)
+  $: topStaff = getTopContributors(filtered.get('aggregate')?.staff)
+  $: topOverall = getTopContributors(filtered.get('aggregate')?.staff?.concat(filtered.get('aggregate')?.community))
 </script>
 
 <svelte:head>
@@ -71,15 +105,15 @@
 <Content>
   <Grid>
     <Row>
-      <Column class="members-count" style="background: rgb(15, 98, 254, 0.1);">
-        <h1>
+      <Column class="styled-row" style="background: rgb(15, 98, 254, 0.1);">
+        <h1 class="number">
           {memberCount}
           <ArrowUp size="{32}" color="var(--cds-interactive-01, #0f62fe)" />
         </h1>
         <h4 class="number-text">Total Members</h4>
       </Column>
-      <Column class="members-count" style="background: rgb(0, 255, 0, 0.1);">
-        <h1>{presenceCount} <Group size="{32}" color="green" /></h1>
+      <Column class="styled-row" style="background: rgb(0, 255, 0, 0.1);">
+        <h1 class="number">{presenceCount} <Group size="{32}" color="green" /></h1>
         <h4 class="number-text">Members Online</h4>
       </Column>
     </Row>
@@ -102,21 +136,21 @@
         class="split-counts"
         style="outline-color: rgb(255, 255, 255, 0.5);"
       >
-        <h1>{total}</h1>
+        <h1 class="number">{total}</h1>
         <h4 class="number-text">Total Questions</h4>
       </Column>
       <Column
         class="split-counts"
         style="color: rgb(255, 153, 0); outline-width:0"
       >
-        <h1>
+        <h1 class="number">
           {staff}
           <Tag style="background-color:rgb(255, 153, 0, 0.6)">{staffPct}</Tag>
         </h1>
         <h4 class="number-text">Answered by Staff</h4>
       </Column>
       <Column class="split-counts" style="outline-color:rgb(15, 98, 254, 0.6)">
-        <h1>
+        <h1 class="number">
           {community}
           <Tag style="background-color:rgb(15, 98, 254, 0.6)"
             >{communityPct}</Tag
@@ -128,7 +162,7 @@
         class="split-counts"
         style="background-color: rgb(255, 0, 0, 0.2); outline-width:0"
       >
-        <h1>
+        <h1 class="number">
           {unanswered}
           <Tag style="background-color:rgb(255, 0, 0, 0.4)">{unansweredPct}</Tag
           >
@@ -161,46 +195,48 @@
           height: '400px',
         }}"
         theme="g100"
-        tooltip="{{
-          customHTML: {},
-        }}"
       /></Row
     >
-    <Row style="margin-top:16px">
+    <!-- <Row style="margin-top:16px">
       <StackedAreaChart
         bind:data
-        options="{{
-          title: '',
-          axes: {
-            left: {
-              title: 'Questions',
-              mapsTo: 'value',
-              stacked: true,
-            },
-            bottom: {
-              title: 'Date',
-              mapsTo: 'key',
-              scaleType: 'time',
-            },
-          },
-          grid: {
-            x: {
-              enabled: false,
-            },
-          },
-          height: '400px',
-        }}"
+        options="{areaChartOptions}"
         theme="g100"
-        tooltip="{{
-          customHTML: {},
-        }}"
       />
-    </Row>
+    </Row> -->
+
+    <Row style="justify-content: center;" class="styled-row" ><h1 class="number-text">Top Contributors</h1></Row>
+    <Row
+      ><Column style="display: grid; justify-content:center">
+        <Row><h2>Overall <CaretUp style="vertical-align:bottom" color="green" size="{32}"/></h2></Row>
+        <Row
+          ><DataTable
+            headers="{[
+              { key: 'name', value: 'User' },
+              { key: 'answers', value: 'Answers' },
+            ]}"
+            rows={topOverall}
+          /></Row
+        >
+      </Column>
+      <Column style="display: grid; justify-content:center"
+        ><Row><h2>Staff <CaretUp style="vertical-align:bottom" color="rgb(255, 153, 0, 0.6)" size="{32}" /></h2></Row>
+        <Row
+          ><DataTable
+            headers="{[
+              { key: 'name', value: 'User' },
+              { key: 'answers', value: 'Answers' },
+            ]}"
+            rows={topStaff}
+          /></Row
+        ></Column
+      ></Row
+    >
   </Grid>
 </Content>
 
 <style>
-  :global(.members-count) {
+  :global(.styled-row) {
     flex-direction: row;
     position: relative;
     left: unset;
@@ -210,12 +246,22 @@
     padding: 12px;
     border-radius: 10px;
   }
+  /* :global(.members-count) {
+    flex-direction: row;
+    position: relative;
+    left: unset;
+    bottom: unset;
+    right: unset;
+    margin: 6px;
+    padding: 12px;
+    border-radius: 10px;
+  } */
 
   :global(.number-text) {
     font-weight: lighter;
   }
 
-  :global(.members-count > h1) {
+  :global(.number) {
     font-size: 60px;
   }
 

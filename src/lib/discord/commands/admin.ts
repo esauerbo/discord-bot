@@ -8,7 +8,7 @@ import {
   postAnswer,
   markAnswered,
   lockDiscussion,
-} from '$lib/github/queries'
+} from '$lib/github/graphqlQueries'
 import { repositoriesWithDiscussions as repositories } from './_repositories'
 import { isThreadWithinHelpChannel } from '../support'
 import type {

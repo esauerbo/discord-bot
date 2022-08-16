@@ -1,7 +1,8 @@
 import type {
   QuestionCategories,
+  QuestionCategoriesArray,
   QuestionCategoriesCounts,
-  GenericQuestion,
+ AnyQuestion ,
 } from './types'
 
 /** rounds start date UP to the next whole week, month, or year */
@@ -9,20 +10,20 @@ export function roundStartDate(unit: string, start: Date): boolean {
   switch (unit) {
     case 'days':
       return true
-    case 'weeks':
+    case 'weeks': // start at the closest Monday 
       if (start.getDay() < 1) {
         start.setDate(start.getDate() + 1)
       } else if (start.getDay() !== 1) {
         start.setDate(start.getDate() + (7 - start.getDay()))
       }
       return true
-    case 'months':
+    case 'months': // start at the first of the month
       if (start.getDate() !== 1) {
         start.setDate(1)
         start.setMonth(start.getMonth() + 1)
       }
       return true
-    case 'years':
+    case 'years': // start on the first of January
       if (start.getMonth() !== 0 || start.getDate() !== 1) {
         start.setDate(1)
         start.setMonth(0)
@@ -67,88 +68,58 @@ export const timeBetweenDates = function (unit: string, dateRange: Date[]) {
   return dates
 }
 
-// export function binDates(dates: Date[], questions: QuestionCategories) {
-//   const today = new Date()
-//   const datedQuestions = new Map<string, QuestionCategories>()
+/** counts the number of questions between two dates in each category */
+function filterQuestionsByDate (
+  datedQuestions: Map<string, QuestionCategories>,
+  questions: QuestionCategories,
+  dates: Date[]
+): QuestionCategories {
+  const filteredQuestions: QuestionCategoriesCounts = {
+    total: 0,
+    unanswered: 0,
+    staff: 0,
+    community: 0,
+  }
+  Object.entries(questions).forEach(([category, categoryQuestions]) => {
+    const questionsBetweenDates: AnyQuestion[] = categoryQuestions.filter(
+      (question: AnyQuestion) =>
+        new Date(question.createdAt) >= dates[0] &&
+        new Date(question.createdAt) < dates[1]
+    )
+    filteredQuestions[category] = questionsBetweenDates.length
+    datedQuestions.get('aggregate')[category] =  datedQuestions.get('aggregate')[category].concat(questionsBetweenDates)
+  })
+  return filteredQuestions
+}
 
-//   const filterQuestionsByDate = (
-//     questions: QuestionCategories,
-//     startDate: Date,
-//     endDate: Date
-//   ) => {
-//     const filteredQuestions = Object.assign({}, questions)
-//     console.log(startDate)
-//     console.log(endDate)
-//     Object.entries(questions).forEach(([category, categoryQuestions]) => {
-//       filteredQuestions[category] = categoryQuestions.filter(
-//         (question: GenericQuestion) =>
-//           question.createdAt >= startDate && question.createdAt < endDate
-//       )
-//       console.log(startDate)
-//       console.log(endDate)
-//     })
-//     return filteredQuestions
-//   }
-//   for (let i = 0; i < dates.length - 1; i++) {
-//     datedQuestions.set(
-//       dates[i].toString(),
-//       filterQuestionsByDate(questions, dates[i], dates[i + 1])
-//     )
-//   }
-//   datedQuestions.set(
-//     dates[dates.length - 1].toString(),
-//     filterQuestionsByDate(questions, dates[dates.length - 1], today)
-//   )
-//   console.log(datedQuestions.get("Sun May 01 2022 00:00:00 GMT-0700 (Pacific Daylight Time)"))
-//   return datedQuestions
-// }
-
+/** maps a start date to the number of questions in each category, beginning at the start date
+ * and ending at the next sequential date, or today for the last date 
+ * also keeps track of total questions for the overall time period
+  */
 export function binDates(
   dates: Date[],
-  questions: QuestionCategories
-): Map<string, QuestionCategoriesCounts> {
+  questions: QuestionCategoriesArray
+): Map<string, QuestionCategories> {
   const today = new Date()
-  const datedQuestions = new Map<string, QuestionCategoriesCounts>([
-    ['aggregate', { total: 0, unanswered: 0, staff: 0, community: 0 }],
+  const datedQuestions = new Map<string, QuestionCategories>([
+    ['aggregate', { total: [], unanswered: [], staff: [], community: [] }],
   ])
   if(!dates?.length) return datedQuestions
 
-  const filterQuestionsByDate = (
-    questions: QuestionCategories,
-    startDate: Date,
-    endDate: Date
-  ): QuestionCategoriesCounts => {
-    const filteredQuestions: QuestionCategoriesCounts = {
-      total: 0,
-      unanswered: 0,
-      staff: 0,
-      community: 0,
-    }
-    Object.entries(questions).forEach(([category, categoryQuestions]) => {
-      let count = categoryQuestions.filter(
-        (question: GenericQuestion) =>
-          new Date(question.createdAt) >= startDate &&
-          new Date(question.createdAt) < endDate
-      )?.length
-      filteredQuestions[category] = count
-      datedQuestions.get('aggregate')[category] += count
-    })
-    return filteredQuestions
-  }
   for (let i = 0; i < dates?.length - 1; i++) {
     datedQuestions.set(
       dates[i].toString(),
-      filterQuestionsByDate(questions, dates[i], dates[i + 1])
+      filterQuestionsByDate(datedQuestions, questions, [dates[i], dates[i + 1]])
     )
   }
   datedQuestions.set(
     dates[dates.length - 1].toString(),
-    filterQuestionsByDate(questions, dates[dates.length - 1], today)
+    filterQuestionsByDate(datedQuestions, questions, [dates[dates.length - 1], today])
   )
   return datedQuestions
 }
 
-export function filterQuestionsByChannel(questions: QuestionCategories, channels: string[]) {
+export function filterQuestionsByChannel(questions: QuestionCategoriesArray, channels: string[]): QuestionCategoriesArray {
   const filtered = Object.assign({}, questions)
   Object.entries(filtered).forEach(([category, categoryQuestions]) => {
     filtered[category] = categoryQuestions.filter((question) => channels.includes(question.channelName))
@@ -156,7 +127,7 @@ export function filterQuestionsByChannel(questions: QuestionCategories, channels
   return filtered
 }
 
-export function filterQuestions(channels: string[], dates: Date[], questions: QuestionCategories,): Map<string, QuestionCategoriesCounts> {
+export function filterQuestions(channels: string[], dates: Date[], questions: QuestionCategoriesArray,): Map<string, QuestionCategories> {
   const filteredBychannel = filterQuestionsByChannel(questions, channels)
   return binDates(dates, filteredBychannel)
 } 

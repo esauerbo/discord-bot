@@ -1,4 +1,4 @@
-import { getRepos } from '../../github/queries'
+import { getRepos } from '../../github/graphqlQueries'
 
 const nameToAlias = new Map<string, string>([
   ['amplify-cli', 'cli'],
