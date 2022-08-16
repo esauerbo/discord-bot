@@ -11,7 +11,7 @@
 <script lang="ts">
   import '@carbon/styles/css/styles.css'
   import '@carbon/charts/styles.css'
-  import { BarChartStacked, StackedAreaChart } from '@carbon/charts-svelte'
+  import { BarChartStacked, PieChart, StackedAreaChart } from '@carbon/charts-svelte'
   import {
     Column,
     Content,
@@ -20,7 +20,7 @@
     Row,
     Tag,
   } from 'carbon-components-svelte'
-  import { ArrowUp, CaretUp, Group } from 'carbon-icons-svelte'
+  import { ArrowUp, CaretUp, Category, Group } from 'carbon-icons-svelte'
   import { filterQuestions, timeBetweenDates } from './applyFilter'
   import FilterMenu from './FilterMenu.svelte'
   import type { Question } from '@prisma/client'
@@ -54,13 +54,23 @@
         values.push({ group: category, key: date, value: count })
       })
     }
+    console.log(values)
     return values
   }
+
+  const getPieData = (questions: QuestionCategories) => {
+    const values: Record<string, any>[] = []
+      Object.entries(questions).forEach(([category, categoryQuestions]) => {
+        values.push({ group: category, count: categoryQuestions.length })
+      })
+    return values
+  }
+
+
 
   const getTopContributors = (questions: AnyQuestion[]) => {
     const counts = questions
       .filter((question: AnyQuestion) => question.answer)
-
       .reduce((count, question) => {
         const key = `${question.answer.answeredBy.discordUsername}${question.answer.answeredBy.githubUsername}`
         return count[key] ? ++count[key] : (count[key] = 1), count
@@ -93,7 +103,8 @@
       ? `${Math.round((100 * parseInt(community)) / parseInt(total))}%`
       : ''
 
-  $: data = getBarData(filtered)
+  $: barData = getBarData(filtered)
+  $: pieData = getPieData(filtered.get('aggregate'))
   $: topStaff = getTopContributors(filtered.get('aggregate')?.staff)
   $: topOverall = getTopContributors(filtered.get('aggregate')?.staff?.concat(filtered.get('aggregate')?.community))
 </script>
@@ -171,8 +182,9 @@
       </Column>
     </Row>
     <Row style="margin-top:16px">
+      <Column sm={3} md={6} lg={8}>
       <BarChartStacked
-        bind:data
+        bind:data={barData}
         options="{{
           title: '',
           axes: {
@@ -195,15 +207,21 @@
           height: '400px',
         }}"
         theme="g100"
-      /></Row
+      /></Column>
+      <Column sm={1} md={2} lg={4}>
+        <PieChart 
+        bind:data={pieData}
+        options={{
+          title: "Pie (value maps to count)",
+          resizable: true,
+          pie: {
+            "valueMapsTo": "count"
+          },
+          height: "400px"
+        }} />
+      </Column>
+      </Row
     >
-    <!-- <Row style="margin-top:16px">
-      <StackedAreaChart
-        bind:data
-        options="{areaChartOptions}"
-        theme="g100"
-      />
-    </Row> -->
 
     <Row style="justify-content: center;" class="styled-row" ><h1 class="number-text">Top Contributors</h1></Row>
     <Row
@@ -215,7 +233,7 @@
               { key: 'name', value: 'User' },
               { key: 'answers', value: 'Answers' },
             ]}"
-            rows={topOverall}
+            bind:rows={topOverall}
           /></Row
         >
       </Column>
@@ -227,7 +245,7 @@
               { key: 'name', value: 'User' },
               { key: 'answers', value: 'Answers' },
             ]}"
-            rows={topStaff}
+            bind:rows={topStaff}
           /></Row
         ></Column
       ></Row
