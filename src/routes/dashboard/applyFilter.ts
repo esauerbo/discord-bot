@@ -125,15 +125,6 @@ export function binDates(
   return datedQuestions
 }
 
-/** filters categorized questions by channel */
-// export function filterQuestionsByChannel(questions: CategorizedQuestions, channels: string[]): CategorizedQuestions {
-//   const filtered = Object.assign({}, questions)
-//   Object.entries(filtered).forEach(([category, categoryQuestions]) => {
-//     filtered[category] = filterByChannel(channels, categoryQuestions)
-//   })
-//   return filtered
-// }
-
 function filterByChannel(channels: string[], questions: DBQuestion[]) {
   return questions.filter((question) => channels.includes(question.channelName))
 }
@@ -190,12 +181,13 @@ export function getTopContributors (
   let counts = Array.from(answers)
   if (staff) counts = counts.filter(([id, user]) => user.isStaff)
   counts = counts
+    .filter(([id, user]) => user.questions.length > 0)
     .map(([id, user]) => [
       id,
       `${user.discordUsername}${user.githubUsername}`,
       user.questions.length,
     ])
-    .sort((prev, next) => next[1] - prev[1])
+    .sort((prev, next) => (next[2] - prev[2]))
     .slice(0, 9)
     .map((contributor) => {
       return {

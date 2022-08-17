@@ -8,7 +8,6 @@ import type { RequestHandler } from '@sveltejs/kit'
 export const GET: RequestHandler = async ({ locals }) => {
   const botGuilds = (await api.get(Routes.userGuilds())) as APIGuild[]
 
-  console.log(botGuilds)
   const guilds = []
   for (const guild of botGuilds) {
     try {

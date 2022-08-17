@@ -17,31 +17,38 @@ const guildId = import.meta.env.VITE_DISCORD_GUILD_ID
 const GUILD_TEXT_CHANNEL = 0
 
 async function fetchHelpChannels() {
+  console.time('help channels')
   try {
     const allChannels = (await api.get(
       Routes.guildChannels(guildId)
     )) as APIPartialChannel[]
     if(allChannels) {
-      return allChannels
+      const filtered = allChannels
       .filter(
         (channel: APIPartialChannel) =>
           channel.type === GUILD_TEXT_CHANNEL &&
           isHelpChannel(channel as TextChannel)
       )
       .map((channel) => channel.name)
+      console.timeEnd('help channels')
+      return filtered
     }
   } catch (error) {
     console.error(`Error fetching guild channels ${guildId}: ${error.message}`)
   }
+  console.timeEnd('help channels')
   return []
 }
 
 async function asyncFilter(arr: DBQuestion[], callback) {
-  return (
+  console.time('async filter')
+  const val =  (
     await Promise.all(
       arr.map(async (item) => ((await callback(item)) ? item : null))
     )
   ).filter((i) => i !== null)
+  console.timeEnd('async filter')
+  return val
 }
 
 async function getGithubUsername(discordUserId: string) {
@@ -107,32 +114,6 @@ async function isStaff(userId: string) {
   return false
 }
 
-// async function isCommunity(guildMember: APIGuildMember) {
-//   const data = await prisma.configuration.findUnique({
-//     where: {
-//       id: guildId,
-//     },
-//     select: {
-//       roles: {
-//         where: {
-//           accessLevelId: {
-//             in: [ACCESS_LEVELS.CONTRIBUTOR, ACCESS_LEVELS.ADMIN],
-//           },
-//         },
-//         select: {
-//           discordRoleId: true,
-//         },
-//       },
-//     },
-//   })
-
-//   if (!data?.roles) return false
-
-//   return data?.roles?.some(({ discordRoleId }) =>
-//     guildMember?.roles?.includes(discordRoleId)
-//   )
-// }
-
 async function getUser(userId: string) {
   const guildMember = (await api.get(Routes.guildMember(guildId, userId))) as
     | APIGuildMember
@@ -143,20 +124,22 @@ async function getUser(userId: string) {
     : 'unknown user'
   let githubUsername = ''
   let staff = false
-  const avatar = guildMember?.user?.avatar ?? `https://cdn.discordapp.com/embed/avatars/${guildMember?.user?.discriminator % 5}.png` 
+  const avatar = guildMember?.user?.avatar ?? `https://cdn.discordapp.com/embed/avatars/${parseInt(guildMember?.user?.discriminator) % 5}.png` 
   if (guildMember) staff = await isStaff(userId)
   if (staff) githubUsername = await getGithubUsername(userId)
+  if(githubUsername) githubUsername = ` (GitHub ${githubUsername})`
   return {
     avatar: avatar,
     id: userId,
     isStaff: staff,
     discordUsername:  discordUsername,
-    githubUsername: ` (GitHub ${githubUsername})`,
+    githubUsername: githubUsername,
     questions: [],
   } as Answerer
 }
 
 async function getContributors(answered: DBQuestion[]) {
+  console.time('get contributors')
   const contributors = new Map<string, Answerer>()
   for (const question of answered) {
     if (!contributors.has(question.answer!.ownerId)) {
@@ -173,21 +156,12 @@ async function getContributors(answered: DBQuestion[]) {
       })
     }
   }
+  console.timeEnd('get contributors')
   return contributors
 }
 
-/** mutates questions with answers to include more data about the answerER */
-// async function getAnswers(solvedQuestions: DBQuestion[]): Promise<AnsweredQuestion[]> {
-//   return await Promise.all(
-//     solvedQuestions.map(async (question) => {
-//         return Object.assign(question, {
-//           answer: { answeredBy: await getUser(question.answer.ownerId) },
-//         })
-//     })
-//   )
-// }
-
 export const GET: RequestHandler = async () => {
+
   const channels = await fetchHelpChannels()
   
   const guildPreview = (await api.get(
@@ -201,9 +175,6 @@ export const GET: RequestHandler = async () => {
   const answered = questions.filter(
     (question) => question.isSolved && question.answer?.ownerId
   )
-  // const answered: AnsweredQuestion[] = await getAnswers(questions.filter(
-  //   (question) => question.isSolved && question.answer?.ownerId)
-  // )
 
   /** @TODO include staff participation in question  */
 

@@ -14,7 +14,6 @@
   import {
     BarChartStacked,
     PieChart,
-    StackedAreaChart,
   } from '@carbon/charts-svelte'
   import {
     Column,
@@ -23,9 +22,8 @@
     Grid,
     Row,
     Tag,
-    Tile,
   } from 'carbon-components-svelte'
-  import { ArrowUp, CaretUp, Category, Group } from 'carbon-icons-svelte'
+  import { ArrowUp, CaretUp, Group } from 'carbon-icons-svelte'
   import {
     filterAnswers,
     filterQuestions,
@@ -37,7 +35,6 @@
   import type {
     Answerer,
     CategorizedQuestions,
-    CategorizedQuestionCounts,
   } from './types'
 
   export let allContributors: Map<string, Answerer>
@@ -72,14 +69,6 @@
     return values
   }
 
-  // const getPieData = (questions: CategorizedQuestionCounts) => {
-  //   const values: Record<string, any>[] = []
-  //   Object.entries(questions).forEach(([category, count]) => {
-  //     values.push({ group: category, count })
-  //   })
-  //   return values
-  // }
-
   let topOverall = getTopContributors(allContributors, false)
   let topStaff = getTopContributors(allContributors, true)
 
@@ -112,8 +101,6 @@
   $: pieDataStaff = sortChannels(filteredQuestions.get('aggregate')!.staff)
   $: pieDataCommunity= sortChannels(filteredQuestions.get('aggregate')!.community)
   $: pieDataUnanswered = sortChannels(filteredQuestions.get('aggregate')!.unanswered)
-  //getPieData(filteredQuestions.get('aggregate')!)
-  /** @TODO filter by staff/contributor*/
   $: topStaff = getTopContributors(filteredContributors, true)
   $: topOverall = getTopContributors(filteredContributors, false)
 </script>
@@ -337,15 +324,6 @@
     margin: 6px;
     padding: 12px;
   }
-  /* :global(.members-count) {
-    flex-direction: row;
-    position: relative;
-    left: unset;
-    bottom: unset;
-    right: unset;
-    margin: 6px;
-    padding: 12px;
-  } */
 
   :global(.number-text) {
     font-weight: 300;
