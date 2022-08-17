@@ -37,80 +37,81 @@
     CategorizedQuestions,
   } from './types'
 
-  export let allContributors: Map<string, Answerer>
-  export let channels: string[]
-  export let allQuestions: CategorizedQuestions
-  export let memberCount: number
-  export let name: string
-  export let presenceCount: number
+  // export let contributors
+  // export let allContributors: Map<string, Answerer>
+  // export let channels: string[]
+  // export let allQuestions: CategorizedQuestions
+  // export let memberCount: number
+  // export let name: string
+  // export let presenceCount: number
 
-  let today = new Date()
-  let endDate = today
-  let startDate = new Date(today.getFullYear(), today.getMonth() - 3, 1)
-  let dates: Date[] = timeBetweenDates('months', [startDate, endDate])
-  let filteredQuestions = filterQuestions(channels, dates, allQuestions)
-  let filteredContributors = filterAnswers(
-    channels,
-    [dates[0], today],
-    allContributors
-  )
+  // let today = new Date()
+  // let endDate = today
+  // let startDate = new Date(today.getFullYear(), today.getMonth() - 3, 1)
+  // let dates: Date[] = timeBetweenDates('months', [startDate, endDate])
+  // let filteredQuestions = filterQuestions(channels, dates, allQuestions)
+  // let filteredContributors = filterAnswers(
+  //   channels,
+  //   [dates[0], today],
+  //   allContributors
+  // )
 
-  const getBarData = (
-    filteredQuestions: Map<string, CategorizedQuestions>
-  ) => {
-    const map = new Map(filteredQuestions)
-    map.delete('aggregate')
-    const values: Record<string, any>[] = []
-    for (const [date, questionCategories] of map) {
-      Object.entries(questionCategories).forEach(([category, questionsArray]) => {
-        values.push({ group: category, key: date, value: questionsArray?.length })
-      })
-    }
-    return values
-  }
+  // const getBarData = (
+  //   filteredQuestions: Map<string, CategorizedQuestions>
+  // ) => {
+  //   const map = new Map(filteredQuestions)
+  //   map.delete('aggregate')
+  //   const values: Record<string, any>[] = []
+  //   for (const [date, questionCategories] of map) {
+  //     Object.entries(questionCategories).forEach(([category, questionsArray]) => {
+  //       values.push({ group: category, key: date, value: questionsArray?.length })
+  //     })
+  //   }
+  //   return values
+  // }
 
-  let topOverall = getTopContributors(allContributors, false)
-  let topStaff = getTopContributors(allContributors, true)
+  // let topOverall = getTopContributors(allContributors, false)
+  // let topStaff = getTopContributors(allContributors, true)
 
-  $: filteredQuestions = filterQuestions(channels, dates, allQuestions)
-  $: filteredContributors = filterAnswers(
-    channels,
-    [dates[0], today],
-    allContributors
-  )
+//   $: filteredQuestions = filterQuestions(channels, dates, allQuestions)
+//   $: filteredContributors = filterAnswers(
+//     channels,
+//     [dates[0], today],
+//     allContributors
+//   )
 
-  $: total = filteredQuestions.get('aggregate')?.total?.length ?? ''
-  $: unanswered = filteredQuestions.get('aggregate')?.unanswered?.length ?? ''
-  $: unansweredPct =
-    total && unanswered
-      ? `${Math.round((100 * parseInt(unanswered)) / parseInt(total))}%`
-      : ''
-  $: staff = filteredQuestions.get('aggregate')?.staff?.length ?? ''
-  $: staffPct =
-    total && staff
-      ? `${Math.round((100 * parseInt(staff)) / parseInt(total))}%`
-      : ''
-  $: community = filteredQuestions.get('aggregate')?.community?.length ?? ''
-  $: communityPct =
-    total && staff
-      ? `${Math.round((100 * parseInt(community)) / parseInt(total))}%`
-      : ''
+//   $: total = filteredQuestions.get('aggregate')?.total?.length ?? ''
+//   $: unanswered = filteredQuestions.get('aggregate')?.unanswered?.length ?? ''
+//   $: unansweredPct =
+//     total && unanswered
+//       ? `${Math.round((100 * parseInt(unanswered)) / parseInt(total))}%`
+//       : ''
+//   $: staff = filteredQuestions.get('aggregate')?.staff?.length ?? ''
+//   $: staffPct =
+//     total && staff
+//       ? `${Math.round((100 * parseInt(staff)) / parseInt(total))}%`
+//       : ''
+//   $: community = filteredQuestions.get('aggregate')?.community?.length ?? ''
+//   $: communityPct =
+//     total && staff
+//       ? `${Math.round((100 * parseInt(community)) / parseInt(total))}%`
+//       : ''
 
-  $: barData = getBarData(filteredQuestions)
-  $: pieDataTotal = sortChannels(filteredQuestions.get('aggregate')!.total)
-  $: pieDataStaff = sortChannels(filteredQuestions.get('aggregate')!.staff)
-  $: pieDataCommunity= sortChannels(filteredQuestions.get('aggregate')!.community)
-  $: pieDataUnanswered = sortChannels(filteredQuestions.get('aggregate')!.unanswered)
-  $: topStaff = getTopContributors(filteredContributors, true)
-  $: topOverall = getTopContributors(filteredContributors, false)
+//   $: barData = getBarData(filteredQuestions)
+//   $: pieDataTotal = sortChannels(filteredQuestions.get('aggregate')!.total)
+//   $: pieDataStaff = sortChannels(filteredQuestions.get('aggregate')!.staff)
+//   $: pieDataCommunity= sortChannels(filteredQuestions.get('aggregate')!.community)
+//   $: pieDataUnanswered = sortChannels(filteredQuestions.get('aggregate')!.unanswered)
+//   $: topStaff = getTopContributors(filteredContributors, true)
+//   $: topOverall = getTopContributors(filteredContributors, false)
 </script>
 
 <svelte:head>
-  <title>{name} Discord Metrics Dashboard></title>
+  <title>Discord Metrics Dashboard></title>
 </svelte:head>
 
 <Content>
-  <Grid>
+ <!-- <Grid>
     <Row>
       <Column class="styled-row" style="background: rgb(15, 98, 254, 0.1);">
         <h1 class="number">
@@ -205,8 +206,7 @@
             height: '400px',
           }}"
           theme="g100"
-        /></Column
-      >
+        /></Column>
       <Row  style="justify-content: center;" class="styled-row">
       <Column style="display: grid; justify-content:center">
         <PieChart
@@ -222,7 +222,7 @@
           theme="g100"
         />
       </Column>
-      <!-- <Column class="styled-row">
+      <Column class="styled-row">
         <PieChart
           bind:data="{pieDataStaff}"
           options="{{
@@ -235,8 +235,8 @@
           }}"
           theme="g100"
         />
-      </Column> -->
-      <!-- <Column class="styled-row">
+      </Column> 
+    <Column class="styled-row">
         <PieChart
           bind:data="{pieDataCommunity}"
           options="{{
@@ -249,7 +249,7 @@
           }}"
           theme="g100"
         />
-      </Column> -->
+      </Column>
       <Column style="display: grid; justify-content:center">
         <PieChart
           bind:data="{pieDataUnanswered}"
@@ -311,7 +311,8 @@
         ></Column
       ></Row
     >
-  </Grid>
+  </Grid> 
+-->
 </Content>
 
 <style>

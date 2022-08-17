@@ -17,7 +17,6 @@ const guildId = import.meta.env.VITE_DISCORD_GUILD_ID
 const GUILD_TEXT_CHANNEL = 0
 
 async function fetchHelpChannels() {
-  console.time('help channels')
   try {
     const allChannels = (await api.get(
       Routes.guildChannels(guildId)
@@ -36,8 +35,24 @@ async function fetchHelpChannels() {
   } catch (error) {
     console.error(`Error fetching guild channels ${guildId}: ${error.message}`)
   }
-  console.timeEnd('help channels')
   return []
+}
+
+async function fetchContributors() {
+  try {
+    const ids = await prisma.answer.groupBy({
+      by: ['ownerId']
+    })
+    const .map(async ({ ownerId }) => await prisma.answer.findMany({
+      where: {
+        ownerId: ownerId
+      }
+    }))
+
+    console.log(ids)
+  } catch (error) {
+    console.error(`Failed to fetch contributors: ${error.message}`)
+  }
 }
 
 async function asyncFilter(arr: DBQuestion[], callback) {
@@ -138,60 +153,63 @@ async function getUser(userId: string) {
   } as Answerer
 }
 
-async function getContributors(answered: DBQuestion[]) {
-  console.time('get contributors')
-  const contributors = new Map<string, Answerer>()
-  for (const question of answered) {
-    if (!contributors.has(question.answer!.ownerId)) {
-      const user = await getUser(question.answer!.ownerId)
-      user.questions.push(question)
-      contributors.set(question.answer!.ownerId, user)
-    } else {
-      contributors.set(question.answer!.ownerId, {
-        ...contributors.get(question.answer!.ownerId),
-        questions: [
-          ...contributors.get(question.answer!.ownerId).questions,
-          question,
-        ],
-      })
-    }
-  }
-  console.timeEnd('get contributors')
-  return contributors
-}
+// async function getContributors(answered: DBQuestion[]) {
+//   console.time('get contributors')
+//   const contributors = new Map<string, Answerer>()
+//   for (const question of answered) {
+//     if (!contributors.has(question.answer!.ownerId)) {
+//       const user = await getUser(question.answer!.ownerId)
+//       user.questions.push(question)
+//       contributors.set(question.answer!.ownerId, user)
+//     } else {
+//       contributors.set(question.answer!.ownerId, {
+//         ...contributors.get(question.answer!.ownerId),
+//         questions: [
+//           ...contributors.get(question.answer!.ownerId).questions,
+//           question,
+//         ],
+//       })
+//     }
+//   }
+//   console.timeEnd('get contributors')
+//   return contributors
+// }
 
 export const GET: RequestHandler = async () => {
 
-  const channels = await fetchHelpChannels()
-  
-  const guildPreview = (await api.get(
-    Routes.guildPreview(guildId)
-  )) as APIGuildPreview
+  await fetchContributors()
 
-  const questions = await prisma.question.findMany({
-    include: { answer: { select: { ownerId: true } }, participation: true },
-  })
-  // questions that are solved and have a selected answer
-  const answered = questions.filter(
-    (question) => question.isSolved && question.answer?.ownerId
-  )
+  // const channels = await fetchHelpChannels()
+  
+  // const guildPreview = (await api.get(
+  //   Routes.guildPreview(guildId)
+  // )) as APIGuildPreview
+
+  // const questions = await prisma.question.findMany({
+  //   include: { answer: { select: { ownerId: true } }, participation: true },
+  // })
+  // // questions that are solved and have a selected answer
+  // const answered = questions.filter(
+  //   (question) => question.isSolved && question.answer?.ownerId
+  // )
 
   /** @TODO include staff participation in question  */
 
   return {
     status: 200,
     body: {
-      allContributors: JSON.stringify(Array.from(await getContributors(answered))),
-      allQuestions: {
-        total: questions,
-        unanswered: questions.filter((question) => !question.isSolved),
-        staff: await asyncFilter(answered, async (question: DBQuestion) => await isStaff(question.answer!.ownerId)),
-        community: await asyncFilter(answered, async (question: DBQuestion) => ! (await isStaff(question.answer!.ownerId))),
-      },
-      channels: channels,
-      memberCount: guildPreview?.approximate_member_count,
-      name: guildPreview?.name,
-      presenceCount: guildPreview?.approximate_presence_count,
+     // contributors: await fetchContributors(),
+      // allContributors: JSON.stringify(Array.from(await getContributors(answered))),
+      // allQuestions: {
+      //   total: questions,
+      //   unanswered: questions.filter((question) => !question.isSolved),
+      //   staff: await asyncFilter(answered, async (question: DBQuestion) => await isStaff(question.answer!.ownerId)),
+      //   community: await asyncFilter(answered, async (question: DBQuestion) => ! (await isStaff(question.answer!.ownerId))),
+      // },
+      // channels: channels,
+      // memberCount: guildPreview?.approximate_member_count,
+      // name: guildPreview?.name,
+      // presenceCount: guildPreview?.approximate_presence_count,
     },
   }
 }
