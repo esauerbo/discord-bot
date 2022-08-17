@@ -8,7 +8,7 @@ export async function addRole(roleId: string, guildId: string, userId: string) {
     console.log(`Successfully added role ${roleId} to user ${userId}`)
     return true
   } catch (err) {
-    console.error(`Failed to add role ${roleId} to user ${userId}: ${err}`)
+    console.error(`Failed to add role ${roleId} to user ${userId} in ${guildId}: ${err}`)
   }
   return false
 }
