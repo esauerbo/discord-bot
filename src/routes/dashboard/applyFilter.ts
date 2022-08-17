@@ -1,7 +1,6 @@
 import type {
   Answerer,
   CategorizedQuestions,
-  CategorizedQuestionCounts,
   DBQuestion,
 } from './types'
 
@@ -71,27 +70,27 @@ export const timeBetweenDates = function (unit: string, dateRange: Date[]) {
 
 /** counts the number of questions between two dates in each category */
 function filterQuestionsByDate(
-  datedQuestions: Map<string, CategorizedQuestionCounts>,
+  datedQuestions: Map<string, CategorizedQuestions>,
   questions: CategorizedQuestions,
   dates: Date[]
-): CategorizedQuestionCounts {
+): CategorizedQuestions {
   const filteredQs = {
-    total: 0,
-    unanswered: 0,
-    staff: 0,
-    community: 0,
-  } as CategorizedQuestionCounts
+    total: [],
+    unanswered: [],
+    staff: [],
+    community: [],
+  } as CategorizedQuestions
 
   Object.entries(questions).forEach(([category, categoryQuestions]) => {
-    const numQsBetweenDates =
+    const questionsBetweenDates =
       categoryQuestions.filter(
         (question: DBQuestion) =>
           new Date(question.createdAt) >= dates[0] &&
           new Date(question.createdAt) < dates[1]
-      )?.length ?? 0
-    filteredQs[category] = numQsBetweenDates
+      ) ?? []
+    filteredQs[category] = questionsBetweenDates
     datedQuestions.get('aggregate')![category] =
-      datedQuestions.get('aggregate')![category] + numQsBetweenDates
+    datedQuestions.get('aggregate')![category] =  datedQuestions.get('aggregate')![category].concat(questionsBetweenDates)
   })
   return filteredQs
 }
@@ -103,10 +102,10 @@ function filterQuestionsByDate(
 export function binDates(
   dates: Date[],
   questions: CategorizedQuestions
-): Map<string, CategorizedQuestionCounts> {
+): Map<string, CategorizedQuestions> {
   const today = new Date()
-  const datedQuestions = new Map<string, CategorizedQuestionCounts>([
-    ['aggregate', { total: 0, unanswered: 0, staff: 0, community: 0 }],
+  const datedQuestions = new Map<string, CategorizedQuestions>([
+    ['aggregate', { total: [], unanswered: [], staff: [], community: [] }],
   ])
   if (!dates?.length) return datedQuestions
   /** @TODO check logic for missing first date */
@@ -144,7 +143,7 @@ export function filterQuestions(
   channels: string[],
   dates: Date[],
   questions: CategorizedQuestions
-): Map<string, CategorizedQuestionCounts> {
+): Map<string, CategorizedQuestions> {
   const filtered = Object.assign({}, questions)
   Object.entries(filtered).forEach(([category, categoryQuestions]) => {
     filtered[category] = filterByChannel(channels, categoryQuestions)
@@ -171,4 +170,41 @@ export function filterAnswers(
     )
   })
   return filtered
+}
+
+export function sortChannels(questions: DBQuestion[]) {
+  const counts = questions
+      .reduce((count, question) => {
+        const key = question.channelName
+        return count[key] ? ++count[key] : (count[key] = 1), count
+      }, {})
+
+    return Object.entries(counts)
+      .map(([channelName, count]) => {return {group: channelName, count}})
+}
+
+export function getTopContributors (
+  answers: Map<string, Answerer>,
+  staff: boolean
+): { id: string; name: string; answers: number }[] {
+  let counts = Array.from(answers)
+  if (staff) counts = counts.filter(([id, user]) => user.isStaff)
+  counts = counts
+    .map(([id, user]) => [
+      id,
+      `${user.discordUsername}${user.githubUsername}`,
+      user.questions.length,
+    ])
+    .sort((prev, next) => next[1] - prev[1])
+    .slice(0, 9)
+    .map((contributor) => {
+      return {
+        id: contributor[0],
+        name: contributor[1],
+        answers: contributor[2],
+      }
+    })
+
+  if (counts) return counts
+  return []
 }

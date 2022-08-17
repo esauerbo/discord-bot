@@ -76,7 +76,7 @@
       <DatePickerInput labelText="FROM" placeholder="mm/dd/yyyy" />
       <DatePickerInput labelText="TO" placeholder="mm/dd/yyyy" />
     </DatePicker>
-    <p style="font-weight:lighter; margin-left:4px;">{label}</p>
+    <p style="font-weight:260; text-align:center;">{label}</p>
   </Column>
   <Column
     ><MultiSelect
@@ -91,13 +91,5 @@
 <style>
   :global(.flatpickr-calendar.open) {
     background-color: var(--cds-ui-01, #f4f4f4);
-  }
-
-  :global(.filter .bx--dropdown) {
-    border-radius: 6px;
-  }
-
-  :global(.filter .bx--multi-select) {
-    border-radius: 6px;
   }
 </style>

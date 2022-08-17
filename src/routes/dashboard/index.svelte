@@ -2,9 +2,8 @@
   import type { Load } from '@sveltejs/kit'
 
   export const load: Load = ({ props }) => {
-    console.log(props)
     return {
-     props: {...props, allContributors: JSON.parse(props.allContributors)}
+      props: { ...props, allContributors: JSON.parse(props.allContributors) },
     }
   }
 </script>
@@ -24,9 +23,16 @@
     Grid,
     Row,
     Tag,
+    Tile,
   } from 'carbon-components-svelte'
   import { ArrowUp, CaretUp, Category, Group } from 'carbon-icons-svelte'
-  import { filterAnswers, filterQuestions, timeBetweenDates } from './applyFilter'
+  import {
+    filterAnswers,
+    filterQuestions,
+    getTopContributors,
+    sortChannels,
+    timeBetweenDates,
+  } from './applyFilter'
   import FilterMenu from './FilterMenu.svelte'
   import type {
     Answerer,
@@ -46,65 +52,67 @@
   let startDate = new Date(today.getFullYear(), today.getMonth() - 3, 1)
   let dates: Date[] = timeBetweenDates('months', [startDate, endDate])
   let filteredQuestions = filterQuestions(channels, dates, allQuestions)
-  let filteredContributors = filterAnswers(channels, [dates[0], today], allContributors)
+  let filteredContributors = filterAnswers(
+    channels,
+    [dates[0], today],
+    allContributors
+  )
 
-  const getBarData = (filteredQuestions: Map<string, CategorizedQuestionCounts>) => {
+  const getBarData = (
+    filteredQuestions: Map<string, CategorizedQuestions>
+  ) => {
     const map = new Map(filteredQuestions)
     map.delete('aggregate')
     const values: Record<string, any>[] = []
     for (const [date, questionCategories] of map) {
-      Object.entries(questionCategories).forEach(([category, count]) => {
-        values.push({ group: category, key: date, value: count })
+      Object.entries(questionCategories).forEach(([category, questionsArray]) => {
+        values.push({ group: category, key: date, value: questionsArray?.length })
       })
     }
     return values
   }
 
-  const getPieData = (questions: CategorizedQuestionCounts) => {
-    const values: Record<string, any>[] = []
-    Object.entries(questions).forEach(([category, count]) => {
-      values.push({ group: category, count })
-    })
-    return values
-  }
-
-  const getTopContributors = (answers: Map<string, Answerer>, staff: boolean) => {
-    let counts = Array.from(answers)
-    //.filter(([id, user]) => staff ? user.isStaff : true)
-    .map(([id, user]) => [`${user.discordUsername}${user.githubUsername}`, user.questions.length])
-    .sort((prev, next) => next[1] - prev[1])
-    .slice(0, 9)
-    .map((contributor) => {return {id: contributor[0], name: contributor[0], answers: contributor[1]}})
-    // console.log(counts)
-    if(counts) return counts
-    return []
-  }
+  // const getPieData = (questions: CategorizedQuestionCounts) => {
+  //   const values: Record<string, any>[] = []
+  //   Object.entries(questions).forEach(([category, count]) => {
+  //     values.push({ group: category, count })
+  //   })
+  //   return values
+  // }
 
   let topOverall = getTopContributors(allContributors, false)
   let topStaff = getTopContributors(allContributors, true)
 
   $: filteredQuestions = filterQuestions(channels, dates, allQuestions)
-  $: filteredContributors = filterAnswers(channels, [dates[0], today], allContributors)
+  $: filteredContributors = filterAnswers(
+    channels,
+    [dates[0], today],
+    allContributors
+  )
 
-  $: total = filteredQuestions.get('aggregate')?.total ?? ''
-  $: unanswered = filteredQuestions.get('aggregate')?.unanswered ?? ''
+  $: total = filteredQuestions.get('aggregate')?.total?.length ?? ''
+  $: unanswered = filteredQuestions.get('aggregate')?.unanswered?.length ?? ''
   $: unansweredPct =
     total && unanswered
       ? `${Math.round((100 * parseInt(unanswered)) / parseInt(total))}%`
       : ''
-  $: staff = filteredQuestions.get('aggregate')?.staff ?? ''
+  $: staff = filteredQuestions.get('aggregate')?.staff?.length ?? ''
   $: staffPct =
     total && staff
       ? `${Math.round((100 * parseInt(staff)) / parseInt(total))}%`
       : ''
-  $: community = filteredQuestions.get('aggregate')?.community ?? ''
+  $: community = filteredQuestions.get('aggregate')?.community?.length ?? ''
   $: communityPct =
     total && staff
       ? `${Math.round((100 * parseInt(community)) / parseInt(total))}%`
       : ''
 
   $: barData = getBarData(filteredQuestions)
-  $: pieData = getPieData(filteredQuestions.get('aggregate')!)
+  $: pieDataTotal = sortChannels(filteredQuestions.get('aggregate')!.total)
+  $: pieDataStaff = sortChannels(filteredQuestions.get('aggregate')!.staff)
+  $: pieDataCommunity= sortChannels(filteredQuestions.get('aggregate')!.community)
+  $: pieDataUnanswered = sortChannels(filteredQuestions.get('aggregate')!.unanswered)
+  //getPieData(filteredQuestions.get('aggregate')!)
   /** @TODO filter by staff/contributor*/
   $: topStaff = getTopContributors(filteredContributors, true)
   $: topOverall = getTopContributors(filteredContributors, false)
@@ -134,7 +142,7 @@
     </Row>
     <Row class="date-container">
       <Column style="max-width:min-content"
-        ><h2 style="font-weight: lighter;">Questions</h2></Column
+        ><h2 style="font-weight: 300;">Questions</h2></Column
       >
       <Column>
         <FilterMenu
@@ -147,24 +155,18 @@
       </Column>
     </Row>
     <Row>
-      <Column
-        class="split-counts"
-        style="outline-color: rgb(255, 255, 255, 0.5);"
-      >
+      <Column class="split-counts">
         <h1 class="number">{total}</h1>
         <h4 class="number-text">Total Questions</h4>
       </Column>
-      <Column
-        class="split-counts"
-        style="color: rgb(255, 153, 0); outline-width:0"
-      >
+      <Column class="split-counts" style="color: rgb(255, 153, 0)">
         <h1 class="number">
           {staff}
           <Tag style="background-color:rgb(255, 153, 0, 0.6)">{staffPct}</Tag>
         </h1>
         <h4 class="number-text">Answered by Staff</h4>
       </Column>
-      <Column class="split-counts" style="outline-color:rgb(15, 98, 254, 0.6)">
+      <Column class="split-counts" style="color:rgb(15, 98, 254)">
         <h1 class="number">
           {community}
           <Tag style="background-color:rgb(15, 98, 254, 0.6)"
@@ -173,10 +175,7 @@
         </h1>
         <h4 class="number-text">Answered by Community</h4>
       </Column>
-      <Column
-        class="split-counts"
-        style="background-color: rgb(255, 0, 0, 0.2); outline-width:0"
-      >
+      <Column class="split-counts" style="color: rgb(255, 0, 0);">
         <h1 class="number">
           {unanswered}
           <Tag style="background-color:rgb(255, 0, 0, 0.4)">{unansweredPct}</Tag
@@ -186,7 +185,7 @@
       </Column>
     </Row>
     <Row style="margin-top:16px">
-      <Column sm="{3}" md="{6}" lg="{8}">
+      <Column >
         <BarChartStacked
           bind:data="{barData}"
           options="{{
@@ -203,6 +202,14 @@
                 scaleType: 'time',
               },
             },
+            color: {
+              scale: {
+                total: '#6f6f6f',
+                staff: 'rgb(255, 153, 0, 0.8)',
+                community: 'rgb(15, 98, 254)',
+                unanswered: 'rgb(255, 0, 0, 0.7)',
+              },
+            },
             grid: {
               x: {
                 enabled: false,
@@ -213,29 +220,74 @@
           theme="g100"
         /></Column
       >
-      <Column sm="{1}" md="{2}" lg="{4}">
+      <Row  style="justify-content: center;" class="styled-row">
+      <Column style="display: grid; justify-content:center">
         <PieChart
-          bind:data="{pieData}"
+          bind:data="{pieDataTotal}"
           options="{{
-            title: 'Pie (value maps to count)',
+            title: 'All questions',
             resizable: true,
             pie: {
               valueMapsTo: 'count',
             },
             height: '400px',
           }}"
+          theme="g100"
         />
       </Column>
+      <!-- <Column class="styled-row">
+        <PieChart
+          bind:data="{pieDataStaff}"
+          options="{{
+            title: 'Answered Staff',
+            resizable: true,
+            pie: {
+              valueMapsTo: 'count',
+            },
+            height: '400px',
+          }}"
+          theme="g100"
+        />
+      </Column> -->
+      <!-- <Column class="styled-row">
+        <PieChart
+          bind:data="{pieDataCommunity}"
+          options="{{
+            title: 'Answered Community',
+            resizable: true,
+            pie: {
+              valueMapsTo: 'count',
+            },
+            height: '400px',
+          }}"
+          theme="g100"
+        />
+      </Column> -->
+      <Column style="display: grid; justify-content:center">
+        <PieChart
+          bind:data="{pieDataUnanswered}"
+          options="{{
+            title: 'Unanswered',
+            resizable: true,
+            pie: {
+              valueMapsTo: 'count',
+            },
+            height: '400px',
+          }}"
+          theme="g100"
+        />
+      </Column>
+    </Row>
     </Row>
     <Row style="justify-content: center;" class="styled-row"
       ><h1 class="number-text">Top Contributors</h1></Row
     >
     <Row
       ><Column style="display: grid; justify-content:center">
-        <Row
-          ><h2>
+        <Row>
+          <h2>
             Overall <CaretUp
-              style="vertical-align:bottom"
+              style="vertical-align:middle"
               color="green"
               size="{32}"
             />
@@ -255,7 +307,7 @@
         ><Row
           ><h2>
             Staff <CaretUp
-              style="vertical-align:bottom"
+              style="vertical-align:middle"
               color="rgb(255, 153, 0, 0.6)"
               size="{32}"
             />
@@ -284,7 +336,6 @@
     right: unset;
     margin: 6px;
     padding: 12px;
-    border-radius: 10px;
   }
   /* :global(.members-count) {
     flex-direction: row;
@@ -294,11 +345,10 @@
     right: unset;
     margin: 6px;
     padding: 12px;
-    border-radius: 10px;
   } */
 
   :global(.number-text) {
-    font-weight: lighter;
+    font-weight: 300;
   }
 
   :global(.number) {
@@ -318,8 +368,5 @@
     margin: 6px;
     padding: 12px;
     margin-top: 20px;
-    outline-style: solid;
-    outline-width: thin;
-    border-radius: 10px;
   }
 </style>

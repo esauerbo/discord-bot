@@ -143,14 +143,15 @@ async function getUser(userId: string) {
     : 'unknown user'
   let githubUsername = ''
   let staff = false
-
+  const avatar = guildMember?.user?.avatar ?? `https://cdn.discordapp.com/embed/avatars/${guildMember?.user?.discriminator % 5}.png` 
   if (guildMember) staff = await isStaff(userId)
   if (staff) githubUsername = await getGithubUsername(userId)
   return {
+    avatar: avatar,
     id: userId,
     isStaff: staff,
-    discordUsername: discordUsername,
-    githubUsername: githubUsername,
+    discordUsername:  discordUsername,
+    githubUsername: ` (GitHub ${githubUsername})`,
     questions: [],
   } as Answerer
 }

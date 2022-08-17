@@ -8,6 +8,7 @@ export type DBQuestion = Question & { answer: { ownerId: string} | null, partici
 
 // object for user who answered a given question 
 export type Answerer = {
+  avatar: string,
   id: string,
   isStaff: boolean,
   discordUsername: string,
