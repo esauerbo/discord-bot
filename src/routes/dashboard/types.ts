@@ -1,27 +1,34 @@
-import type { Question } from '@prisma/client'
+import type { Participation, Question } from '@prisma/client'
 
-export type AnsweredQuestion = Question & { answer: { answeredBy: Answerer } }
-export type AnyQuestion = Question | AnsweredQuestion
+// question fetched from db with answer's ownerId and participation fields included
+export type DBQuestion = Question & { answer: { ownerId: string} | null, participation: Participation[]}
 
+// answered or unanswered question
+// export type AnyQuestion = Question | DBQuestion
+
+// object for user who answered a given question 
 export type Answerer = {
   id: string,
-  isAdminOrStaff: boolean,
+  isStaff: boolean,
   discordUsername: string,
-  githubUsername?: string,
+  githubUsername: string,
+  questions: DBQuestion[],
 }
 
-export type QuestionCategories = QuestionCategoriesCounts | QuestionCategoriesArray
+// export type QuestionCategories = QuestionCategoriesCounts | QuestionCategoriesArray
 
-export type QuestionCategoriesCounts = {
+// counts number of questions in each category
+export type CategorizedQuestionCounts = {
   [total: string]: number,
   unanswered: number,
   staff: number,
   community: number,
 }
 
-export type QuestionCategoriesArray = {
-  [total: string]: AnyQuestion[],
-  unanswered: AnyQuestion[],
-  staff: AnyQuestion[],
-  community: AnyQuestion[],
+// stores acutal questions in each category
+export type CategorizedQuestions = {
+  [total: string]: DBQuestion[],
+  unanswered: DBQuestion[],
+  staff: DBQuestion[],
+  community: DBQuestion[],
 }

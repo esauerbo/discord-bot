@@ -1,8 +1,11 @@
 <script lang="ts" context="module">
   import type { Load } from '@sveltejs/kit'
 
-  export const load: Load = async ({ session, fetch }) => {
+  export const load: Load = async ({ session, fetch, url }) => {
     if (session) {
+      // if (session?.user?.isStaff) {
+      //   return { redirect: '/dashboard', status: 307 }
+      // }
       return {
         props: {
           guilds: await (await fetch('/api/guilds')).json(),
@@ -30,6 +33,7 @@
     SideNavDivider,
     ToastNotification,
   } from 'carbon-components-svelte'
+  import ChartPie from "carbon-icons-svelte/lib/ChartPie.svelte";
   import Home from 'carbon-icons-svelte/lib/Home.svelte'
   import UserAdmin from 'carbon-icons-svelte/lib/UserAdmin.svelte'
   import LogoGithub from 'carbon-icons-svelte/lib/LogoGithub.svelte'
@@ -121,6 +125,14 @@
             isSelected="{$page.url.pathname === '/admin'}"
           />
         {/if}
+        {#if $session?.user?.isStaff}
+        <SideNavLink
+          icon="{ChartPie}"
+          text="Dashboard"
+          href="/dashboard"
+          isSelected="{$page.url.pathname === '/dashboard'}"
+        />
+      {/if}
         <SideNavDivider />
         <SideNavLink
           icon="{LogoGithub}"

@@ -11,7 +11,11 @@
 <script lang="ts">
   import '@carbon/styles/css/styles.css'
   import '@carbon/charts/styles.css'
-  import { BarChartStacked, PieChart, StackedAreaChart } from '@carbon/charts-svelte'
+  import {
+    BarChartStacked,
+    PieChart,
+    StackedAreaChart,
+  } from '@carbon/charts-svelte'
   import {
     Column,
     Content,
@@ -23,29 +27,25 @@
   import { ArrowUp, CaretUp, Category, Group } from 'carbon-icons-svelte'
   import { filterQuestions, timeBetweenDates } from './applyFilter'
   import FilterMenu from './FilterMenu.svelte'
-  import type { Question } from '@prisma/client'
   import type {
-    AnsweredQuestion,
-    AnyQuestion,
-    QuestionCategories,
-    QuestionCategoriesCounts,
+    Answerer,
+    CategorizedQuestions,
+    CategorizedQuestionCounts,
   } from './types'
 
-  export let questions: QuestionCategories
-  export let name: string
+  export let channels: string[]
+  export let contributors: Map<string, Answerer>
   export let memberCount: number
+  export let name: string
   export let presenceCount: number
+  export let allQuestions: CategorizedQuestions
 
   let today = new Date()
   let endDate = today
   let startDate = new Date(today.getFullYear(), today.getMonth() - 3, 1)
   let dates: Date[] = timeBetweenDates('months', [startDate, endDate])
-  let channels = Array.from(
-    new Set(questions.total.map((question: Question) => question.channelName))
-  )
-  let filtered = filterQuestions(channels, dates, questions)
 
-  const getBarData = (filtered: Map<string, QuestionCategories>) => {
+  const getBarData = (filtered: Map<string, CategorizedQuestionCounts>) => {
     const map = new Map(filtered)
     map.delete('aggregate')
     const values: Record<string, any>[] = []
@@ -54,59 +54,56 @@
         values.push({ group: category, key: date, value: count })
       })
     }
-    console.log(values)
     return values
   }
 
-  const getPieData = (questions: QuestionCategories) => {
+  const getPieData = (questions: CategorizedQuestionCounts) => {
     const values: Record<string, any>[] = []
-      Object.entries(questions).forEach(([category, categoryQuestions]) => {
-        values.push({ group: category, count: categoryQuestions.length })
-      })
+    Object.entries(questions).forEach(([category, count]) => {
+      values.push({ group: category, count })
+    })
     return values
   }
 
+  // const getTopContributors = (questions: DBQuestion[]) => {
+  //   const counts = questions
+  //     .filter((question: DBQuestion) => question.answer)
+  //     .reduce((count, question) => {
+  //       const key = `${question.answer.answeredBy.discordUsername}${question.answer.answeredBy.githubUsername}`
+  //       return count[key] ? ++count[key] : (count[key] = 1), count
+  //     }, {})
 
+  //   return Object.entries(counts)
+  //     .sort((prev, next) => next[1] - prev[1])
+  //     .slice(0, 9)
+  //     .map((contributor) => {return {id: contributor[0], name: contributor[0], answers: contributor[1]}})
+  // }
+  // let topOverall = getTopContributors(filtered.get('aggregate')?.staff?.concat(filtered.get('aggregate')?.community))
+  // let topStaff = getTopContributors(filtered.get('aggregate')?.staff)
 
-  const getTopContributors = (questions: AnyQuestion[]) => {
-    const counts = questions
-      .filter((question: AnyQuestion) => question.answer)
-      .reduce((count, question) => {
-        const key = `${question.answer.answeredBy.discordUsername}${question.answer.answeredBy.githubUsername}`
-        return count[key] ? ++count[key] : (count[key] = 1), count
-      }, {})
+  $: filtered = filterQuestions(channels, dates, allQuestions)
 
-    return Object.entries(counts)
-      .sort((prev, next) => next[1] - prev[1])
-      .slice(0, 9)
-      .map((contributor) => {return {id: contributor[0], name: contributor[0], answers: contributor[1]}})
-  }
-  let topOverall = getTopContributors(filtered.get('aggregate')?.staff?.concat(filtered.get('aggregate')?.community))
-  let topStaff = getTopContributors(filtered.get('aggregate')?.staff)
-
-  $: filtered = filterQuestions(channels, dates, questions)
-
-  $: total = filtered.get('aggregate')?.total?.length ?? ''
-  $: unanswered = filtered.get('aggregate')?.unanswered?.length ?? ''
+  $: total = filtered.get('aggregate')?.total ?? ''
+  $: unanswered = filtered.get('aggregate')?.unanswered ?? ''
   $: unansweredPct =
     total && unanswered
       ? `${Math.round((100 * parseInt(unanswered)) / parseInt(total))}%`
       : ''
-  $: staff = filtered.get('aggregate')?.staff?.length ?? ''
+  $: staff = filtered.get('aggregate')?.staff ?? ''
   $: staffPct =
     total && staff
       ? `${Math.round((100 * parseInt(staff)) / parseInt(total))}%`
       : ''
-  $: community = filtered.get('aggregate')?.community?.length ?? ''
+  $: community = filtered.get('aggregate')?.community ?? ''
   $: communityPct =
     total && staff
       ? `${Math.round((100 * parseInt(community)) / parseInt(total))}%`
       : ''
 
   $: barData = getBarData(filtered)
-  $: pieData = getPieData(filtered.get('aggregate'))
-  $: topStaff = getTopContributors(filtered.get('aggregate')?.staff)
-  $: topOverall = getTopContributors(filtered.get('aggregate')?.staff?.concat(filtered.get('aggregate')?.community))
+  $: pieData = getPieData(filtered.get('aggregate')!)
+  // $: topStaff = getTopContributors(filtered.get('aggregate')?.staff)
+  // $: topOverall = getTopContributors(filtered.get('aggregate')?.staff?.concat(filtered.get('aggregate')?.community))
 </script>
 
 <svelte:head>
@@ -124,7 +121,10 @@
         <h4 class="number-text">Total Members</h4>
       </Column>
       <Column class="styled-row" style="background: rgb(0, 255, 0, 0.1);">
-        <h1 class="number">{presenceCount} <Group size="{32}" color="green" /></h1>
+        <h1 class="number">
+          {presenceCount}
+          <Group size="{32}" color="green" />
+        </h1>
         <h4 class="number-text">Members Online</h4>
       </Column>
     </Row>
@@ -182,74 +182,93 @@
       </Column>
     </Row>
     <Row style="margin-top:16px">
-      <Column sm={3} md={6} lg={8}>
-      <BarChartStacked
-        bind:data={barData}
-        options="{{
-          title: '',
-          axes: {
-            left: {
-              title: 'Questions',
-              mapsTo: 'value',
-              stacked: true,
+      <Column sm="{3}" md="{6}" lg="{8}">
+        <BarChartStacked
+          bind:data="{barData}"
+          options="{{
+            title: '',
+            axes: {
+              left: {
+                title: 'Questions',
+                mapsTo: 'value',
+                stacked: true,
+              },
+              bottom: {
+                title: 'Date',
+                mapsTo: 'key',
+                scaleType: 'time',
+              },
             },
-            bottom: {
-              title: 'Date',
-              mapsTo: 'key',
-              scaleType: 'time',
+            grid: {
+              x: {
+                enabled: false,
+              },
             },
-          },
-          grid: {
-            x: {
-              enabled: false,
+            height: '400px',
+          }}"
+          theme="g100"
+        /></Column
+      >
+      <Column sm="{1}" md="{2}" lg="{4}">
+        <PieChart
+          bind:data="{pieData}"
+          options="{{
+            title: 'Pie (value maps to count)',
+            resizable: true,
+            pie: {
+              valueMapsTo: 'count',
             },
-          },
-          height: '400px',
-        }}"
-        theme="g100"
-      /></Column>
-      <Column sm={1} md={2} lg={4}>
-        <PieChart 
-        bind:data={pieData}
-        options={{
-          title: "Pie (value maps to count)",
-          resizable: true,
-          pie: {
-            "valueMapsTo": "count"
-          },
-          height: "400px"
-        }} />
+            height: '400px',
+          }}"
+        />
       </Column>
-      </Row
-    >
+    </Row>
 
-    <Row style="justify-content: center;" class="styled-row" ><h1 class="number-text">Top Contributors</h1></Row>
+    <!-- <Row style="justify-content: center;" class="styled-row"
+      ><h1 class="number-text">Top Contributors</h1></Row
+    >
     <Row
       ><Column style="display: grid; justify-content:center">
-        <Row><h2>Overall <CaretUp style="vertical-align:bottom" color="green" size="{32}"/></h2></Row>
+        <Row
+          ><h2>
+            Overall <CaretUp
+              style="vertical-align:bottom"
+              color="green"
+              size="{32}"
+            />
+          </h2></Row
+        >
         <Row
           ><DataTable
             headers="{[
               { key: 'name', value: 'User' },
               { key: 'answers', value: 'Answers' },
             ]}"
-            bind:rows={topOverall}
+            bind:rows="{topOverall}"
           /></Row
         >
       </Column>
       <Column style="display: grid; justify-content:center"
-        ><Row><h2>Staff <CaretUp style="vertical-align:bottom" color="rgb(255, 153, 0, 0.6)" size="{32}" /></h2></Row>
+        ><Row
+          ><h2>
+            Staff <CaretUp
+              style="vertical-align:bottom"
+              color="rgb(255, 153, 0, 0.6)"
+              size="{32}"
+            />
+          </h2></Row
+        >
         <Row
           ><DataTable
             headers="{[
               { key: 'name', value: 'User' },
               { key: 'answers', value: 'Answers' },
             ]}"
-            bind:rows={topStaff}
+            bind:rows="{topStaff}"
           /></Row
         ></Column
       ></Row
-    >
+    > -->
   </Grid>
 </Content>
 
