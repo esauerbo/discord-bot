@@ -209,17 +209,17 @@ export const GET: RequestHandler = async () => {
   return {
     status: 200,
     body: {
-      channels: channels,
-      contributors:  await getContributors(answered),
-      memberCount: guildPreview?.approximate_member_count,
-      name: guildPreview?.name,
-      presenceCount: guildPreview?.approximate_presence_count,
+      allContributors: JSON.stringify(Array.from(await getContributors(answered))),
       allQuestions: {
         total: questions,
         unanswered: questions.filter((question) => !question.isSolved),
         staff: await asyncFilter(answered, async (question: DBQuestion) => await isStaff(question.answer!.ownerId)),
         community: await asyncFilter(answered, async (question: DBQuestion) => ! (await isStaff(question.answer!.ownerId))),
       },
+      channels: channels,
+      memberCount: guildPreview?.approximate_member_count,
+      name: guildPreview?.name,
+      presenceCount: guildPreview?.approximate_presence_count,
     },
   }
 }

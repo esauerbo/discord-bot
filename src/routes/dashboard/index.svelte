@@ -2,8 +2,9 @@
   import type { Load } from '@sveltejs/kit'
 
   export const load: Load = ({ props }) => {
+    console.log(props)
     return {
-      props,
+     props: {...props, allContributors: JSON.parse(props.allContributors)}
     }
   }
 </script>
@@ -25,7 +26,7 @@
     Tag,
   } from 'carbon-components-svelte'
   import { ArrowUp, CaretUp, Category, Group } from 'carbon-icons-svelte'
-  import { filterQuestions, timeBetweenDates } from './applyFilter'
+  import { filterAnswers, filterQuestions, timeBetweenDates } from './applyFilter'
   import FilterMenu from './FilterMenu.svelte'
   import type {
     Answerer,
@@ -33,20 +34,22 @@
     CategorizedQuestionCounts,
   } from './types'
 
+  export let allContributors: Map<string, Answerer>
   export let channels: string[]
-  export let contributors: Map<string, Answerer>
+  export let allQuestions: CategorizedQuestions
   export let memberCount: number
   export let name: string
   export let presenceCount: number
-  export let allQuestions: CategorizedQuestions
 
   let today = new Date()
   let endDate = today
   let startDate = new Date(today.getFullYear(), today.getMonth() - 3, 1)
   let dates: Date[] = timeBetweenDates('months', [startDate, endDate])
+  let filteredQuestions = filterQuestions(channels, dates, allQuestions)
+  let filteredContributors = filterAnswers(channels, [dates[0], today], allContributors)
 
-  const getBarData = (filtered: Map<string, CategorizedQuestionCounts>) => {
-    const map = new Map(filtered)
+  const getBarData = (filteredQuestions: Map<string, CategorizedQuestionCounts>) => {
+    const map = new Map(filteredQuestions)
     map.delete('aggregate')
     const values: Record<string, any>[] = []
     for (const [date, questionCategories] of map) {
@@ -65,45 +68,46 @@
     return values
   }
 
-  // const getTopContributors = (questions: DBQuestion[]) => {
-  //   const counts = questions
-  //     .filter((question: DBQuestion) => question.answer)
-  //     .reduce((count, question) => {
-  //       const key = `${question.answer.answeredBy.discordUsername}${question.answer.answeredBy.githubUsername}`
-  //       return count[key] ? ++count[key] : (count[key] = 1), count
-  //     }, {})
+  const getTopContributors = (answers: Map<string, Answerer>, staff: boolean) => {
+    let counts = Array.from(answers)
+    //.filter(([id, user]) => staff ? user.isStaff : true)
+    .map(([id, user]) => [`${user.discordUsername}${user.githubUsername}`, user.questions.length])
+    .sort((prev, next) => next[1] - prev[1])
+    .slice(0, 9)
+    .map((contributor) => {return {id: contributor[0], name: contributor[0], answers: contributor[1]}})
+    // console.log(counts)
+    if(counts) return counts
+    return []
+  }
 
-  //   return Object.entries(counts)
-  //     .sort((prev, next) => next[1] - prev[1])
-  //     .slice(0, 9)
-  //     .map((contributor) => {return {id: contributor[0], name: contributor[0], answers: contributor[1]}})
-  // }
-  // let topOverall = getTopContributors(filtered.get('aggregate')?.staff?.concat(filtered.get('aggregate')?.community))
-  // let topStaff = getTopContributors(filtered.get('aggregate')?.staff)
+  let topOverall = getTopContributors(allContributors, false)
+  let topStaff = getTopContributors(allContributors, true)
 
-  $: filtered = filterQuestions(channels, dates, allQuestions)
+  $: filteredQuestions = filterQuestions(channels, dates, allQuestions)
+  $: filteredContributors = filterAnswers(channels, [dates[0], today], allContributors)
 
-  $: total = filtered.get('aggregate')?.total ?? ''
-  $: unanswered = filtered.get('aggregate')?.unanswered ?? ''
+  $: total = filteredQuestions.get('aggregate')?.total ?? ''
+  $: unanswered = filteredQuestions.get('aggregate')?.unanswered ?? ''
   $: unansweredPct =
     total && unanswered
       ? `${Math.round((100 * parseInt(unanswered)) / parseInt(total))}%`
       : ''
-  $: staff = filtered.get('aggregate')?.staff ?? ''
+  $: staff = filteredQuestions.get('aggregate')?.staff ?? ''
   $: staffPct =
     total && staff
       ? `${Math.round((100 * parseInt(staff)) / parseInt(total))}%`
       : ''
-  $: community = filtered.get('aggregate')?.community ?? ''
+  $: community = filteredQuestions.get('aggregate')?.community ?? ''
   $: communityPct =
     total && staff
       ? `${Math.round((100 * parseInt(community)) / parseInt(total))}%`
       : ''
 
-  $: barData = getBarData(filtered)
-  $: pieData = getPieData(filtered.get('aggregate')!)
-  // $: topStaff = getTopContributors(filtered.get('aggregate')?.staff)
-  // $: topOverall = getTopContributors(filtered.get('aggregate')?.staff?.concat(filtered.get('aggregate')?.community))
+  $: barData = getBarData(filteredQuestions)
+  $: pieData = getPieData(filteredQuestions.get('aggregate')!)
+  /** @TODO filter by staff/contributor*/
+  $: topStaff = getTopContributors(filteredContributors, true)
+  $: topOverall = getTopContributors(filteredContributors, false)
 </script>
 
 <svelte:head>
@@ -223,8 +227,7 @@
         />
       </Column>
     </Row>
-
-    <!-- <Row style="justify-content: center;" class="styled-row"
+    <Row style="justify-content: center;" class="styled-row"
       ><h1 class="number-text">Top Contributors</h1></Row
     >
     <Row
@@ -268,7 +271,7 @@
           /></Row
         ></Column
       ></Row
-    > -->
+    >
   </Grid>
 </Content>
 
