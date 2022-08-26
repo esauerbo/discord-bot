@@ -1,3 +1,5 @@
+import type { Question } from '../types'
+
 export function sortChannels(questions: Question[]) {
   const counts = questions.reduce((count, question) => {
     const key = question.channelName

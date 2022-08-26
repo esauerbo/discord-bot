@@ -1,3 +1,5 @@
+import type { Contributor, Question, Questions } from '../types'
+
 function filterByDate(questions: Question[], dates: Date[]): Question[] {
   return questions.filter(
     (question) =>
